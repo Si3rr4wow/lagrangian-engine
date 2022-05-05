@@ -1,6 +1,6 @@
+import './index.css'
 import * as THREE from 'three'
-
-// init
+import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls'
 
 const camera = new THREE.PerspectiveCamera(
   70,
@@ -31,3 +31,14 @@ function animation(time: number) {
 
   renderer.render(scene, camera)
 }
+
+const clock = new THREE.Clock(true)
+const controls = new FirstPersonControls(camera, renderer.domElement)
+
+const render = () => {
+  requestAnimationFrame(render)
+
+  controls.update(clock.getDelta())
+}
+
+render()
