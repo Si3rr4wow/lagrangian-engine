@@ -6,7 +6,8 @@
     "dev": "webpack serve --open",
     "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "format": "prettier -w ."
+    "format": "prettier -w .",
+    "lint": "eslint"
   },
   "author": "",
   "license": "ISC",
@@ -20,7 +21,6 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-jest-formatting": "^3.1.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-react": "^7.29.4",
     "jest": "^27.5.1",
     "prettier": "^2.5.1",
     "style-loader": "^3.3.1",

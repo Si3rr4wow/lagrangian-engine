@@ -6,7 +6,6 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    'plugin:react/recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
     'plugin:import/typescript',
@@ -21,7 +20,6 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: [
-    'react',
     '@typescript-eslint',
     'prettier',
     'import',
@@ -30,10 +28,10 @@ module.exports = {
   root: true,
   rules: {
     eqeqeq: 'error',
-    'import/no-default-export': 'warn',
-    'import/no-unresolved': 'warn',
+    'import/no-default-export': 'error',
+    'import/no-unresolved': 'error',
     'import/order': [
-      'warn',
+      'error',
       {
         pathGroups: [
           {
@@ -45,17 +43,10 @@ module.exports = {
         pathGroupsExcludedImportTypes: ['builtin'],
       },
     ],
-    'prettier/prettier': 'warn',
-    'react/react-in-jsx-scope': 'off',
-    'react/prop-types': 'off',
+    'prettier/prettier': 'error',
     'jest-formatting/padding-around-describe-blocks': 2,
     'jest-formatting/padding-around-test-blocks': 2,
-    '@typescript-eslint/explicit-module-boundary-types': 'warn',
-    '@typescript-eslint/explicit-function-return-type': 'off',
-  },
-  settings: {
-    react: {
-      version: 'detect',
-    },
+    '@typescript-eslint/explicit-module-boundary-types': 'error',
+    '@typescript-eslint/explicit-function-return-type': 'error',
   },
 }

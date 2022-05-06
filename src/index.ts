@@ -1,6 +1,14 @@
 import './index.css'
 import * as THREE from 'three'
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls'
+import { makeWave } from './math/makeWaves'
+
+const wave1 = makeWave()
+
+console.log(wave1({ range: [0, 4], segments: 20 }))
+console.log(wave1({ range: [0, 2], segments: 10 }))
+console.log(wave1({ range: [2, 4], segments: 10 }))
+console.log(wave1({ range: [-2, 2], segments: 20 }))
 
 const camera = new THREE.PerspectiveCamera(
   70,
@@ -25,7 +33,7 @@ document.body.appendChild(renderer.domElement)
 
 // animation
 
-function animation(time: number) {
+function animation(time: number): void {
   mesh.rotation.x = time / 2000
   mesh.rotation.y = time / 1000
 
@@ -35,7 +43,7 @@ function animation(time: number) {
 const clock = new THREE.Clock(true)
 const controls = new FirstPersonControls(camera, renderer.domElement)
 
-const render = () => {
+const render = (): void => {
   requestAnimationFrame(render)
 
   controls.update(clock.getDelta())
