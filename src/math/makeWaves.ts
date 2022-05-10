@@ -31,13 +31,22 @@ const makeWaveform: MareWaveForm = (parameters): ((x: number) => number) => {
     amplitude * Math.sin((x * Math.PI + xDisplacement) * (2 * frequency))
 }
 
-type MakeWave = (
-  parameters?: WaveParameters
-) => (options: WaveOptions) => Array<[number, number]>
+type Wave = (options: WaveOptions) => Array<[number, number]>
+type MakeWave = (parameters?: WaveParameters) => Wave
 export const makeWave: MakeWave = (parameters = {}) => {
   const waveform = makeWaveform(parameters)
   return (options: WaveOptions) => {
     const xArray = makeXArray(options)
     return xArray.map((x) => [x, waveform(x)])
   }
+}
+
+type MakeWaveField = (depth: number) => Array<[number, number]>[]
+export const makeWaves: MakeWaveField = (depth) => {
+  return new Array(depth).fill(0).map((_, i) =>
+    makeWave({ frequency: 0.1, xDisplacement: i })({
+      range: [0, 20],
+      segments: 200,
+    })
+  )
 }

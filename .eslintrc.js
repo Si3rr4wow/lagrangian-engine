@@ -19,12 +19,7 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  plugins: [
-    '@typescript-eslint',
-    'prettier',
-    'import',
-    'jest-formatting',
-  ],
+  plugins: ['@typescript-eslint', 'prettier', 'import', 'jest-formatting'],
   root: true,
   rules: {
     eqeqeq: 'error',
@@ -43,7 +38,12 @@ module.exports = {
         pathGroupsExcludedImportTypes: ['builtin'],
       },
     ],
-    'prettier/prettier': 'error',
+    'prettier/prettier': [
+      'error',
+      {
+        endOfLine: 'auto',
+      },
+    ],
     'jest-formatting/padding-around-describe-blocks': 2,
     'jest-formatting/padding-around-test-blocks': 2,
     '@typescript-eslint/explicit-module-boundary-types': 'error',
