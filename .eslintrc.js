@@ -48,5 +48,6 @@ module.exports = {
     'jest-formatting/padding-around-test-blocks': 2,
     '@typescript-eslint/explicit-module-boundary-types': 'error',
     '@typescript-eslint/explicit-function-return-type': 'error',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
   },
 }
