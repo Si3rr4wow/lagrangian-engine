@@ -6,12 +6,14 @@ import { MutableWave } from '../../math/waves'
 
 const stats = new Stats()
 stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
-stats.dom.style.top = '40px'
+stats.dom.style.top = '100px'
 document.body.appendChild(stats.dom)
 
 const mutableWave = new MutableWave(
-  { period: 12.5, amplitude: 10 },
-  { period: 12.5, amplitude: 10 }
+  { period: 12.5, amplitude: 1 },
+  { period: 12.5, amplitude: 3 },
+  { period: 12.5, amplitude: 1 },
+  { period: 12.5, amplitude: 3 }
 )
 
 type Element = HTMLDivElement | HTMLLabelElement | HTMLInputElement
@@ -34,7 +36,12 @@ const paramKeys = [
   'horizontalDisplacement',
 ]
 
-const axes = ['xParameters', 'yParameters']
+const axes = [
+  'xSinParameters',
+  'ySinParameters',
+  'xCosParameters',
+  'yCosParameters',
+]
 
 const initWaveManipulators = (): void => {
   axes.forEach((axis) => {
@@ -49,6 +56,8 @@ const initWaveManipulators = (): void => {
       controlsWrapper.appendChild(paramInputLabel)
       paramInputLabel.appendChild(paramInput)
       paramInput.type = 'range'
+      paramInput.min = '1'
+      paramInput.max = '10'
       paramInput.onchange = (event): void => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -83,8 +92,8 @@ export const renderHome = (): void => {
 
   const meshes: Array<[THREE.Mesh, [number, number]]> = []
 
-  for (let x = 0; x < 100; x++) {
-    for (let y = 0; y < 100; y++) {
+  for (let x = 0; x < 200; x++) {
+    for (let y = 0; y < 200; y++) {
       const mesh = new THREE.Mesh(geometry, material)
       mesh.position.set(x, y, mutableWave.calculate(x, y))
       meshes.push([mesh, [x, y]])
@@ -109,16 +118,16 @@ export const renderHome = (): void => {
   const animation: THREE.XRAnimationLoopCallback = () => {
     stats.begin()
     controls.update()
-    // mutableWave.xParameters = {
-    //   ...mutableWave.xParameters,
+    // mutableWave.xSinParameters = {
+    //   ...mutableWave.xSinParameters,
     //   horizontalDisplacement:
-    //     (mutableWave.xParameters.horizontalDisplacement || 0) +
+    //     (mutableWave.xSinParameters.horizontalDisplacement || 0) +
     //     clock.getDelta() * 50,
     // }
-    // mutableWave.yParameters = {
-    //   ...mutableWave.yParameters,
+    // mutableWave.ySinParameters = {
+    //   ...mutableWave.ySinParameters,
     //   horizontalDisplacement:
-    //     (mutableWave.yParameters.horizontalDisplacement || 0) +
+    //     (mutableWave.ySinParameters.horizontalDisplacement || 0) +
     //     clock.getDelta() * 50,
     // }
     if (mutableWave.paramsChangedSinceLastCalculate) {
