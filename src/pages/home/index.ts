@@ -2,17 +2,24 @@ import * as THREE from 'three'
 import './index.css'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { MutableWave } from '../../math/MutableWave'
+import { WaveCoordArray, WaveField } from '../../math/WaveField'
 import { WaveControls } from './WaveControls'
 import { StatsDisplay, stats } from './Stats'
 
-const mutableWave = new MutableWave(
+const defaultWaveArgs = [
   { period: 10, amplitude: 1 },
   { period: 10, amplitude: 1 },
   { period: 10, amplitude: 1 },
-  { period: 10, amplitude: 1 }
-)
+  { period: 10, amplitude: 1 },
+]
 
-const sqrtCubeCount = 128
+const sqrtCubeCount = 64
+
+const mutableWave = new MutableWave(...defaultWaveArgs)
+const waveField = new WaveField({
+  xLength: sqrtCubeCount,
+  yLength: sqrtCubeCount,
+})
 
 WaveControls(mutableWave)
 StatsDisplay()
@@ -28,60 +35,6 @@ const setupCamera = (): { camera: THREE.Camera } => {
 }
 
 type WaveMeshes = Array<[THREE.Mesh, [number, number]]>
-type WaveCoordArray = Array<[number, number, number]>
-
-const generateWaveCoordArray = (mutableWave: MutableWave): WaveCoordArray => {
-  const wave: WaveCoordArray = []
-
-  for (let x = 0; x < sqrtCubeCount; x++) {
-    for (let y = 0; y < sqrtCubeCount; y++) {
-      const z = mutableWave.calculate(x, y)
-      wave.push([x, y, z])
-    }
-  }
-
-  return wave
-}
-
-const waveCoordsToTris = (wave: WaveCoordArray): Array<THREE.Vector3> => {
-  return wave.reduce<Array<THREE.Vector3>>((acc, cur, i) => {
-    if (!wave[i + sqrtCubeCount]) {
-      return acc
-    }
-
-    if ((i + 1) % sqrtCubeCount) {
-      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
-      const up = new THREE.Vector3(
-        wave[i + 1]?.[0],
-        wave[i + 1]?.[1],
-        wave[i + 1]?.[2]
-      )
-      const right = new THREE.Vector3(
-        wave[i + sqrtCubeCount]?.[0],
-        wave[i + sqrtCubeCount]?.[1],
-        wave[i + sqrtCubeCount]?.[2]
-      )
-      acc = [...acc, here, up, right]
-    }
-
-    if (i % sqrtCubeCount) {
-      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
-      const right = new THREE.Vector3(
-        wave[i + sqrtCubeCount]?.[0],
-        wave[i + sqrtCubeCount]?.[1],
-        wave[i + sqrtCubeCount]?.[2]
-      )
-      const downAndRight = new THREE.Vector3(
-        wave[i - 1 + sqrtCubeCount]?.[0],
-        wave[i - 1 + sqrtCubeCount]?.[1],
-        wave[i - 1 + sqrtCubeCount]?.[2]
-      )
-      acc = [...acc, downAndRight, right, here]
-    }
-
-    return acc
-  }, [] as Array<THREE.Vector3>)
-}
 
 const setupCubes = (
   scene: THREE.Scene,
@@ -103,14 +56,13 @@ const setupCubes = (
 }
 
 const setupPlanes = (
-  scene: THREE.Scene,
-  { waveCoordArray }: { waveCoordArray: WaveCoordArray }
+  scene: THREE.Scene
 ): { tris: Array<THREE.Vector3>; geometry: THREE.BufferGeometry } => {
   const material = new THREE.MeshNormalMaterial({
     side: THREE.DoubleSide,
   })
 
-  const tris = waveCoordsToTris(waveCoordArray)
+  const tris = waveField.triangles
 
   const geometry = new THREE.BufferGeometry().setFromPoints(tris)
   geometry.computeVertexNormals()
@@ -179,9 +131,10 @@ export const renderHome = (): void => {
 
   const { camera } = setupCamera()
   const scene = new THREE.Scene()
-  const waveCoordArray = generateWaveCoordArray(mutableWave)
-  const { meshes: cubeMeshes } = setupCubes(scene, { waveCoordArray })
-  const { tris, geometry } = setupPlanes(scene, { waveCoordArray })
+  const { tris, geometry } = setupPlanes(scene)
+  const { meshes: cubeMeshes } = setupCubes(scene, {
+    waveCoordArray: waveField.coords,
+  })
   setupAxes(scene)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
