@@ -98,6 +98,17 @@ const waveCoordsToTris = (waveField: WaveField): Triangles => {
   }, [] as Array<THREE.Vector3>)
 }
 
+const generateGeometry = (waveField: WaveField): THREE.BufferGeometry => {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setFromPoints(waveField.triangles)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+const generateMesh = (waveField: WaveField): THREE.Mesh => {
+  return new THREE.Mesh(waveField.geometry, waveField.material)
+}
+
 type WaveFieldArgs = {
   xLength: number
   yLength: number
@@ -108,15 +119,22 @@ export class WaveField extends MutableWave {
     super(mutableWaveArgs)
     this.xLength = xLength
     this.yLength = yLength
+    this._material = new THREE.MeshNormalMaterial({
+      side: THREE.DoubleSide,
+    })
     this._coords = generateWaveCoordArray(this)
     this._triangles = waveCoordsToTris(this)
+    this._geometry = generateGeometry(this)
+    this._mesh = generateMesh(this)
   }
+  private _coords: WaveCoordArray
+  private _triangles: Triangles
+  private _geometry: THREE.BufferGeometry
+  private _material: THREE.Material
+  private _mesh: THREE.Mesh
 
   public xLength
   public yLength
-
-  private _coords
-  private _triangles
 
   public get coords(): WaveCoordArray {
     return this._coords
@@ -124,5 +142,21 @@ export class WaveField extends MutableWave {
 
   public get triangles(): Triangles {
     return this._triangles
+  }
+
+  public get geometry(): THREE.BufferGeometry {
+    return this._geometry
+  }
+
+  public get material(): THREE.Material {
+    return this._material
+  }
+
+  public set material(nextMaterial: THREE.Material) {
+    this._material = nextMaterial
+  }
+
+  public get mesh(): THREE.Mesh {
+    return this._mesh
   }
 }

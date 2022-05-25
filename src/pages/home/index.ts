@@ -61,16 +61,7 @@ const setupCubes = (
 const setupPlanes = (
   scene: THREE.Scene
 ): { tris: Array<THREE.Vector3>; geometry: THREE.BufferGeometry } => {
-  const material = new THREE.MeshNormalMaterial({
-    side: THREE.DoubleSide,
-  })
-
-  const tris = waveField.triangles
-
-  const geometry = new THREE.BufferGeometry().setFromPoints(tris)
-  geometry.computeVertexNormals()
-
-  const mesh = new THREE.Mesh(geometry, material)
+  const { geometry, triangles: tris, mesh } = waveField
   scene.add(mesh)
 
   return { tris, geometry }
