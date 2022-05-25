@@ -52,13 +52,22 @@ export const xyWaveFunction: XYWaveFunction = (
   return (x: number, y: number): number => xWave(x) * yWave(y)
 }
 
+export interface MutableWaveArgs {
+  x?: { sinParameters?: WaveParameters; cosParameters?: WaveParameters }
+  y?: { sinParameters?: WaveParameters; cosParameters?: WaveParameters }
+}
+
 export class MutableWave {
-  constructor(
-    xSinParameters: WaveParameters = {},
-    ySinParameters: WaveParameters = {},
-    xCosParameters: WaveParameters = {},
-    yCosParameters: WaveParameters = {}
-  ) {
+  constructor({
+    x: {
+      sinParameters: xSinParameters = {},
+      cosParameters: xCosParameters = {},
+    } = {},
+    y: {
+      sinParameters: ySinParameters = {},
+      cosParameters: yCosParameters = {},
+    } = {},
+  }: MutableWaveArgs) {
     this._xSinParameters = xSinParameters
     this._ySinParameters = ySinParameters
     this._xCosParameters = xCosParameters

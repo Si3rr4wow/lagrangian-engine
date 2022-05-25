@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { MutableWave, WaveParameters } from './MutableWave'
+import { MutableWave, MutableWaveArgs } from './MutableWave'
 
 export type WaveCoordArray = Array<[number, number, number]>
 type Triangles = Array<THREE.Vector3>
@@ -7,11 +7,6 @@ type Triangles = Array<THREE.Vector3>
 const generateWaveCoordArray = (waveField: WaveField): WaveCoordArray => {
   const wave: WaveCoordArray = []
 
-  console.log(
-    '🚀 ~ file: WaveField.ts ~ line 11 ~ generateWaveCoordArray ~ waveField.xLength',
-    waveField.xLength,
-    waveField
-  )
   for (let x = 0; x < waveField.xLength; x++) {
     for (let y = 0; y < waveField.yLength; y++) {
       const z = waveField.calculate(x, y)
@@ -103,21 +98,14 @@ const waveCoordsToTris = (waveField: WaveField): Triangles => {
   }, [] as Array<THREE.Vector3>)
 }
 
-interface WaveFieldArgs {
-  xWaves?: { xSinParameters?: WaveParameters; xCosParameters?: WaveParameters }
-  yWaves?: { ySinParameters?: WaveParameters; yCosParameters?: WaveParameters }
+type WaveFieldArgs = {
   xLength: number
   yLength: number
-}
+} & MutableWaveArgs
 
 export class WaveField extends MutableWave {
-  constructor({
-    xWaves: { xSinParameters = {}, xCosParameters = {} } = {},
-    yWaves: { ySinParameters = {}, yCosParameters = {} } = {},
-    xLength,
-    yLength,
-  }: WaveFieldArgs) {
-    super(xSinParameters, ySinParameters, xCosParameters, yCosParameters)
+  constructor({ xLength, yLength, ...mutableWaveArgs }: WaveFieldArgs) {
+    super(mutableWaveArgs)
     this.xLength = xLength
     this.yLength = yLength
     this._coords = generateWaveCoordArray(this)

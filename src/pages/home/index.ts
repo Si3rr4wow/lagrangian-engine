@@ -1,24 +1,27 @@
 import * as THREE from 'three'
 import './index.css'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { MutableWave } from '../../math/MutableWave'
+import { MutableWave, MutableWaveArgs } from '../../math/MutableWave'
 import { WaveCoordArray, WaveField } from '../../math/WaveField'
 import { WaveControls } from './WaveControls'
 import { StatsDisplay, stats } from './Stats'
 
-const defaultWaveArgs = [
-  { period: 10, amplitude: 1 },
-  { period: 10, amplitude: 1 },
-  { period: 10, amplitude: 1 },
-  { period: 10, amplitude: 1 },
-]
+const mutableWaveArgs: MutableWaveArgs = {
+  x: {
+    sinParameters: { period: 10, amplitude: 1 },
+    cosParameters: { period: 10, amplitude: 1 },
+  },
+  y: {
+    sinParameters: { period: 10, amplitude: 1 },
+    cosParameters: { period: 10, amplitude: 1 },
+  },
+}
 
-const sqrtCubeCount = 64
-
-const mutableWave = new MutableWave(...defaultWaveArgs)
+const mutableWave = new MutableWave(mutableWaveArgs)
 const waveField = new WaveField({
-  xLength: sqrtCubeCount,
-  yLength: sqrtCubeCount,
+  ...mutableWaveArgs,
+  xLength: 30,
+  yLength: 60,
 })
 
 WaveControls(mutableWave)
@@ -29,7 +32,7 @@ const setupCamera = (): { camera: THREE.Camera } => {
     70,
     window.innerWidth / window.innerHeight
   )
-  camera.position.set(0, 0, sqrtCubeCount)
+  camera.position.set(-10, -10, 10)
 
   return { camera }
 }
@@ -85,6 +88,8 @@ const setupAxes = (scene: THREE.Scene): { axes: THREE.AxesHelper } => {
   return { axes }
 }
 
+// This function is still pretty wild west. I'm consistently amazed
+// when it delivers a framerate higher than 1
 const animateWaves = (
   clock: THREE.Clock,
   {
