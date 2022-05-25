@@ -1,142 +1,201 @@
-import Stats from 'stats.js'
 import * as THREE from 'three'
 import './index.css'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { MutableWave } from '../../math/waves'
-
-const stats = new Stats()
-stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
-stats.dom.style.top = '100px'
-document.body.appendChild(stats.dom)
+import { MutableWave } from '../../math/MutableWave'
+import { WaveControls } from './WaveControls'
+import { StatsDisplay, stats } from './Stats'
 
 const mutableWave = new MutableWave(
-  { period: 12.5, amplitude: 1 },
-  { period: 12.5, amplitude: 3 },
-  { period: 12.5, amplitude: 1 },
-  { period: 12.5, amplitude: 3 }
+  { period: 10, amplitude: 1 },
+  { period: 10, amplitude: 1 },
+  { period: 10, amplitude: 1 },
+  { period: 10, amplitude: 1 }
 )
 
-type Element = HTMLDivElement | HTMLLabelElement | HTMLInputElement
+const sqrtCubeCount = 128
 
-type Tag = <TElement extends Element>(name: string) => () => TElement
+WaveControls(mutableWave)
+StatsDisplay()
 
-const tag: Tag =
-  <TElement extends Element>(name: string) =>
-  (): TElement =>
-    document.createElement(name) as TElement
-
-const Div = tag<HTMLDivElement>('div')
-const Label = tag<HTMLLabelElement>('label')
-const Input = tag<HTMLInputElement>('input')
-
-const paramKeys = [
-  'period',
-  'amplitude',
-  'verticalDisplacement',
-  'horizontalDisplacement',
-]
-
-const axes = [
-  'xSinParameters',
-  'ySinParameters',
-  'xCosParameters',
-  'yCosParameters',
-]
-
-const initWaveManipulators = (): void => {
-  axes.forEach((axis) => {
-    const controlsWrapper = Div()
-    controlsWrapper.innerText = axis
-    controlsWrapper.style.display = 'flex'
-    document.body.appendChild(controlsWrapper)
-    paramKeys.forEach((param) => {
-      const paramInputLabel = Label()
-      paramInputLabel.innerText = param
-      const paramInput = Input()
-      controlsWrapper.appendChild(paramInputLabel)
-      paramInputLabel.appendChild(paramInput)
-      paramInput.type = 'range'
-      paramInput.min = '1'
-      paramInput.max = '10'
-      paramInput.onchange = (event): void => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        mutableWave[axis] = {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          ...mutableWave[axis],
-          [param]: Number((event?.target as HTMLInputElement)?.value) || 1,
-        }
-      }
-    })
-  })
-}
-
-initWaveManipulators()
-
-export const renderHome = (): void => {
-  THREE.Object3D.DefaultUp.set(0, 0, 1)
-
+const setupCamera = (): { camera: THREE.Camera } => {
   const camera = new THREE.PerspectiveCamera(
     70,
     window.innerWidth / window.innerHeight
   )
-  camera.position.set(50, 50, 50)
+  camera.position.set(0, 0, sqrtCubeCount)
 
-  const scene = new THREE.Scene()
+  return { camera }
+}
 
-  const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xffff00,
-  })
+type WaveMeshes = Array<[THREE.Mesh, [number, number]]>
+type WaveCoordArray = Array<[number, number, number]>
 
-  const meshes: Array<[THREE.Mesh, [number, number]]> = []
+const generateWaveCoordArray = (mutableWave: MutableWave): WaveCoordArray => {
+  const wave: WaveCoordArray = []
 
-  for (let x = 0; x < 200; x++) {
-    for (let y = 0; y < 200; y++) {
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(x, y, mutableWave.calculate(x, y))
-      meshes.push([mesh, [x, y]])
-      scene.add(mesh)
+  for (let x = 0; x < sqrtCubeCount; x++) {
+    for (let y = 0; y < sqrtCubeCount; y++) {
+      const z = mutableWave.calculate(x, y)
+      wave.push([x, y, z])
     }
   }
 
-  const axesHelper = new THREE.AxesHelper(5)
-  axesHelper.setColors(
+  return wave
+}
+
+const waveCoordsToTris = (wave: WaveCoordArray): Array<THREE.Vector3> => {
+  return wave.reduce<Array<THREE.Vector3>>((acc, cur, i) => {
+    if (!wave[i + sqrtCubeCount]) {
+      return acc
+    }
+
+    if ((i + 1) % sqrtCubeCount) {
+      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
+      const up = new THREE.Vector3(
+        wave[i + 1]?.[0],
+        wave[i + 1]?.[1],
+        wave[i + 1]?.[2]
+      )
+      const right = new THREE.Vector3(
+        wave[i + sqrtCubeCount]?.[0],
+        wave[i + sqrtCubeCount]?.[1],
+        wave[i + sqrtCubeCount]?.[2]
+      )
+      acc = [...acc, here, up, right]
+    }
+
+    if (i % sqrtCubeCount) {
+      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
+      const right = new THREE.Vector3(
+        wave[i + sqrtCubeCount]?.[0],
+        wave[i + sqrtCubeCount]?.[1],
+        wave[i + sqrtCubeCount]?.[2]
+      )
+      const downAndRight = new THREE.Vector3(
+        wave[i - 1 + sqrtCubeCount]?.[0],
+        wave[i - 1 + sqrtCubeCount]?.[1],
+        wave[i - 1 + sqrtCubeCount]?.[2]
+      )
+      acc = [...acc, downAndRight, right, here]
+    }
+
+    return acc
+  }, [] as Array<THREE.Vector3>)
+}
+
+const setupCubes = (
+  scene: THREE.Scene,
+  { waveCoordArray }: { waveCoordArray: WaveCoordArray }
+): { meshes: WaveMeshes } => {
+  const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x0000ff,
+  })
+
+  const meshes: WaveMeshes = waveCoordArray.map(([x, y, z]) => {
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.position.set(x, y, z)
+    scene.add(mesh)
+    return [mesh, [x, y]]
+  })
+
+  return { meshes }
+}
+
+const setupPlanes = (
+  scene: THREE.Scene,
+  { waveCoordArray }: { waveCoordArray: WaveCoordArray }
+): { tris: Array<THREE.Vector3>; geometry: THREE.BufferGeometry } => {
+  const material = new THREE.MeshNormalMaterial({
+    side: THREE.DoubleSide,
+  })
+
+  const tris = waveCoordsToTris(waveCoordArray)
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(tris)
+  geometry.computeVertexNormals()
+
+  const mesh = new THREE.Mesh(geometry, material)
+  scene.add(mesh)
+
+  return { tris, geometry }
+}
+
+const setupAxes = (scene: THREE.Scene): { axes: THREE.AxesHelper } => {
+  const axes = new THREE.AxesHelper(5)
+  axes.setColors(
     new THREE.Color(0xff0000),
     new THREE.Color(0x00ff00),
     new THREE.Color(0x0000ff)
   )
-  scene.add(axesHelper)
+  scene.add(axes)
+
+  return { axes }
+}
+
+const animateWaves = (
+  clock: THREE.Clock,
+  {
+    meshes,
+    tris,
+    geometry,
+  }: {
+    meshes: WaveMeshes
+    tris: Array<THREE.Vector3>
+    geometry: THREE.BufferGeometry
+  }
+): void => {
+  mutableWave.xSinParameters = {
+    ...mutableWave.xSinParameters,
+    horizontalDisplacement:
+      (mutableWave.xSinParameters.horizontalDisplacement || 0) +
+      clock.getDelta() * 10,
+  }
+  mutableWave.ySinParameters = {
+    ...mutableWave.ySinParameters,
+    horizontalDisplacement:
+      (mutableWave.ySinParameters.horizontalDisplacement || 0) +
+      clock.getDelta() * 10,
+  }
+  if (mutableWave.paramsChangedSinceLastCalculate) {
+    meshes.forEach(([mesh, [x, y]]) => {
+      mesh.position.set(x, y, mutableWave.calculate(x, y))
+    })
+    const nextTris = tris.map(
+      (vector) =>
+        new THREE.Vector3(
+          vector.x,
+          vector.y,
+          mutableWave.calculate(vector.x, vector.y)
+        )
+    )
+    geometry.setFromPoints(nextTris)
+    geometry.computeVertexNormals()
+  }
+}
+
+export const renderHome = (): void => {
+  THREE.Object3D.DefaultUp.set(0, 0, 1)
+
+  const { camera } = setupCamera()
+  const scene = new THREE.Scene()
+  const waveCoordArray = generateWaveCoordArray(mutableWave)
+  const { meshes: cubeMeshes } = setupCubes(scene, { waveCoordArray })
+  const { tris, geometry } = setupPlanes(scene, { waveCoordArray })
+  setupAxes(scene)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)
   document.body.appendChild(renderer.domElement)
   const controls = new OrbitControls(camera, renderer.domElement)
 
-  // const clock = new THREE.Clock()
+  const clock = new THREE.Clock()
   const animation: THREE.XRAnimationLoopCallback = () => {
-    stats.begin()
     controls.update()
-    // mutableWave.xSinParameters = {
-    //   ...mutableWave.xSinParameters,
-    //   horizontalDisplacement:
-    //     (mutableWave.xSinParameters.horizontalDisplacement || 0) +
-    //     clock.getDelta() * 50,
-    // }
-    // mutableWave.ySinParameters = {
-    //   ...mutableWave.ySinParameters,
-    //   horizontalDisplacement:
-    //     (mutableWave.ySinParameters.horizontalDisplacement || 0) +
-    //     clock.getDelta() * 50,
-    // }
-    if (mutableWave.paramsChangedSinceLastCalculate) {
-      meshes.forEach(([mesh, [x, y]]) => {
-        mesh.position.set(x, y, mutableWave.calculate(x, y))
-      })
-    }
-    renderer.render(scene, camera)
+    stats.begin()
+    animateWaves(clock, { meshes: cubeMeshes, tris, geometry })
     stats.end()
+    renderer.render(scene, camera)
   }
   renderer.setAnimationLoop(animation)
 
