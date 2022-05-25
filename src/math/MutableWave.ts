@@ -73,7 +73,10 @@ export class MutableWave {
     this._xCosParameters = xCosParameters
     this._yCosParameters = yCosParameters
     this._paramsChangedSinceLastCalculate = true
+    this._id = Math.floor(Math.random() * 10000000)
   }
+
+  _id
 
   private _xSinParameters: WaveParameters
   private _ySinParameters: WaveParameters

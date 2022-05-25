@@ -140,6 +140,10 @@ export class WaveField extends MutableWave {
     return this._coords
   }
 
+  public set coords(nextCoords: WaveCoordArray) {
+    this._coords = nextCoords
+  }
+
   public get triangles(): Triangles {
     return this._triangles
   }
@@ -158,5 +162,13 @@ export class WaveField extends MutableWave {
 
   public get mesh(): THREE.Mesh {
     return this._mesh
+  }
+
+  public refresh(): void {
+    console.log('Refreshing')
+    this._coords = generateWaveCoordArray(this)
+    this._triangles = waveCoordsToTris(this)
+    this.geometry.setFromPoints(this.triangles)
+    this.geometry.computeVertexNormals()
   }
 }
