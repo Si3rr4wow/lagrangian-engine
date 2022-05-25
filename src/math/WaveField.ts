@@ -166,9 +166,21 @@ export class WaveField extends MutableWave {
 
   public refresh(): void {
     console.log('Refreshing')
-    this._coords = generateWaveCoordArray(this)
-    this._triangles = waveCoordsToTris(this)
+    this.recalculateCoords()
+    this.recalculateTriangles()
     this.geometry.setFromPoints(this.triangles)
     this.geometry.computeVertexNormals()
+  }
+
+  public recalculateCoords(): void {
+    this.coords.forEach((coord) => {
+      coord[2] = this.calculate(coord[0], coord[1])
+    })
+  }
+
+  public recalculateTriangles(): void {
+    this.triangles.forEach((coord) => {
+      coord.setZ(this.calculate(coord.x, coord.y))
+    })
   }
 }
