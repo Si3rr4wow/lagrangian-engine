@@ -14,29 +14,6 @@ const generateWaveCoordArray = (waveField: WaveField): Array<THREE.Vector3> => {
   return wave
 }
 
-// We are on a rightmost (x max) edge of the coordinate array if
-// there is no array element that is one more y cycle away
-// from our current index
-const isRightmostEdgeCoord = (
-  coordIndex: number,
-  waveField: WaveField
-): boolean => {
-  return !waveField.coords[coordIndex + waveField.yLength]
-}
-
-// There is a coordinate above our current position in the array
-// if the next coordinate's index is not evenly divisible by
-// the y length of the coordinate array.
-const hasCoordAbove = (coordIndex: number, waveField: WaveField): boolean => {
-  return !!((coordIndex + 1) % waveField.yLength)
-}
-
-//There is a coordinate below our current position if the current
-// index is not evenly divisible by the y length
-const hasCoordBelow = (coordIndex: number, waveField: WaveField): boolean => {
-  return !!(coordIndex % waveField.yLength)
-}
-
 /*
 b
 |  \
@@ -58,27 +35,33 @@ If from a we can find c then we construct the triangle acd
 export const generateTriangleStencil = (
   waveField: WaveField
 ): Array<number> => {
-  return waveField.coords.reduce<Array<number>>((acc, _cur, i) => {
-    if (isRightmostEdgeCoord(i, waveField)) {
-      return acc
-    }
+  const triangles = []
+  for (let x = 0; x < waveField.xLength; x++) {
+    for (let y = 0; y < waveField.yLength; y++) {
+      if (x === waveField.xLength - 1) {
+        continue
+      }
 
-    if (hasCoordAbove(i, waveField)) {
-      const here = i
-      const up = i + 1
-      const right = i + waveField.yLength
-      acc = [...acc, here, up, right]
-    }
+      const here = y + x * waveField.xLength
 
-    if (hasCoordBelow(i, waveField)) {
-      const here = i
-      const right = i + waveField.yLength
-      const downAndRight = i - 1 + waveField.yLength
-      acc = [...acc, downAndRight, right, here]
-    }
+      if (y < waveField.yLength - 1) {
+        const up = here + 1
+        const right = here + waveField.yLength
+        triangles.push(here)
+        triangles.push(up)
+        triangles.push(right)
+      }
 
-    return acc
-  }, [])
+      if (y >= 1) {
+        const right = here + waveField.yLength
+        const downAndRight = right - 1
+        triangles.push(here)
+        triangles.push(right)
+        triangles.push(downAndRight)
+      }
+    }
+  }
+  return triangles
 }
 
 const generateGeometry = (waveField: WaveField): THREE.BufferGeometry => {
@@ -143,6 +126,7 @@ export class WaveField extends MutableWave {
 
   public set material(nextMaterial: THREE.Material) {
     this._material = nextMaterial
+    this._mesh.material = this._material
   }
 
   public get mesh(): THREE.Mesh {
@@ -151,8 +135,11 @@ export class WaveField extends MutableWave {
 
   public refresh(): void {
     this.recalculateCoords()
+
     this.calculateTriangles()
+
     this.geometry.setFromPoints(this.triangles)
+
     this.geometry.computeVertexNormals()
   }
 
@@ -164,28 +151,11 @@ export class WaveField extends MutableWave {
   }
 
   private recalculateCoords(): void {
-    // uncomment to prove while backwards is fastest
-    // console.time('coords.forEach')
-    // this.coords.forEach((coord) => {
-    //   coord.setZ(this.calculate(coord.x, coord.y))
-    // })
-    // console.timeEnd('coords.forEach')
-
-    // console.time('coords.while')
-    // let i = 0
-    // while (i < coordsLength) {
-    //   this.coords[i].setZ(this.calculate(this.coords[i].x, this.coords[i].y))
-    //   i++
-    // }
-    // console.timeEnd('coords.while')
-
     const coordsLength = this.coords.length
-    // console.time('coords.whileBackwards')
     let j = coordsLength
     while (j--) {
       this.coords[j].setZ(this.calculate(this.coords[j].x, this.coords[j].y))
     }
-    // console.timeEnd('coords.whileBackwards')
   }
 
   private calculateTriangles(): Array<THREE.Vector3> {

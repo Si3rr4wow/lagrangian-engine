@@ -13,8 +13,8 @@ const waveField = new WaveField({
     sin: { period: 1, amplitude: 1 },
     cos: { period: 1, amplitude: 1 },
   },
-  xLength: 100,
-  yLength: 100,
+  xLength: 256,
+  yLength: 256,
 })
 
 WaveControls(waveField)
@@ -57,6 +57,7 @@ export const renderHome = (): void => {
   const scene = new THREE.Scene()
   setupPlanes(scene)
   setupAxes(scene)
+  scene.background = new THREE.Color('#d6a9c6')
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)
