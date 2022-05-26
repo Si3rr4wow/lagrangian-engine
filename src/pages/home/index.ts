@@ -1,20 +1,20 @@
 import * as THREE from 'three'
 import './index.css'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { WaveCoordArray, WaveField } from '../../math/WaveField'
+import { WaveField } from '../../math/WaveField'
 import { WaveControls } from './WaveControls'
 
 const waveField = new WaveField({
   x: {
-    sinParameters: { period: 10, amplitude: 1 },
-    cosParameters: { period: 10, amplitude: 1 },
+    sin: { period: 1, amplitude: 1 },
+    cos: { period: 1, amplitude: 1 },
   },
   y: {
-    sinParameters: { period: 10, amplitude: 1 },
-    cosParameters: { period: 10, amplitude: 1 },
+    sin: { period: 1, amplitude: 1 },
+    cos: { period: 1, amplitude: 1 },
   },
-  xLength: 50,
-  yLength: 50,
+  xLength: 100,
+  yLength: 100,
 })
 
 WaveControls(waveField)
@@ -27,27 +27,6 @@ const setupCamera = (): { camera: THREE.Camera } => {
   camera.position.set(-10, -10, 10)
 
   return { camera }
-}
-
-type WaveMeshes = Array<[THREE.Mesh, [number, number]]>
-
-const setupCubes = (
-  scene: THREE.Scene,
-  { waveCoordArray }: { waveCoordArray: WaveCoordArray }
-): { meshes: WaveMeshes } => {
-  const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
-  const material = new THREE.MeshBasicMaterial({
-    color: 0x0000ff,
-  })
-
-  const meshes: WaveMeshes = waveCoordArray.map(([x, y, z]) => {
-    const mesh = new THREE.Mesh(geometry, material)
-    mesh.position.set(x, y, z)
-    scene.add(mesh)
-    return [mesh, [x, y]]
-  })
-
-  return { meshes }
 }
 
 const setupPlanes = (
@@ -77,7 +56,6 @@ export const renderHome = (): void => {
   const { camera } = setupCamera()
   const scene = new THREE.Scene()
   setupPlanes(scene)
-  setupCubes(scene, { waveCoordArray: waveField.coords })
   setupAxes(scene)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })

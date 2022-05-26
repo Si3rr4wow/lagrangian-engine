@@ -1,16 +1,13 @@
 import * as THREE from 'three'
 import { MutableWave, MutableWaveArgs } from './MutableWave'
 
-export type WaveCoordArray = Array<[number, number, number]>
-type Triangles = Array<THREE.Vector3>
-
-const generateWaveCoordArray = (waveField: WaveField): WaveCoordArray => {
-  const wave: WaveCoordArray = []
+const generateWaveCoordArray = (waveField: WaveField): Array<THREE.Vector3> => {
+  const wave: Array<THREE.Vector3> = []
 
   for (let x = 0; x < waveField.xLength; x++) {
     for (let y = 0; y < waveField.yLength; y++) {
       const z = waveField.calculate(x, y)
-      wave.push([x, y, z])
+      wave.push(new THREE.Vector3(x, y, z))
     }
   }
 
@@ -58,44 +55,30 @@ If from a we can find b then we construct the triangle abc
 
 If from a we can find c then we construct the triangle acd
 */
-const waveCoordsToTris = (waveField: WaveField): Triangles => {
-  return waveField.coords.reduce<Array<THREE.Vector3>>((acc, cur, i) => {
+export const generateTriangleStencil = (
+  waveField: WaveField
+): Array<number> => {
+  return waveField.coords.reduce<Array<number>>((acc, _cur, i) => {
     if (isRightmostEdgeCoord(i, waveField)) {
       return acc
     }
 
     if (hasCoordAbove(i, waveField)) {
-      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
-      const up = new THREE.Vector3(
-        waveField.coords[i + 1]?.[0],
-        waveField.coords[i + 1]?.[1],
-        waveField.coords[i + 1]?.[2]
-      )
-      const right = new THREE.Vector3(
-        waveField.coords[i + waveField.yLength]?.[0],
-        waveField.coords[i + waveField.yLength]?.[1],
-        waveField.coords[i + waveField.yLength]?.[2]
-      )
+      const here = i
+      const up = i + 1
+      const right = i + waveField.yLength
       acc = [...acc, here, up, right]
     }
 
     if (hasCoordBelow(i, waveField)) {
-      const here = new THREE.Vector3(cur[0], cur[1], cur[2])
-      const right = new THREE.Vector3(
-        waveField.coords[i + waveField.yLength]?.[0],
-        waveField.coords[i + waveField.yLength]?.[1],
-        waveField.coords[i + waveField.yLength]?.[2]
-      )
-      const downAndRight = new THREE.Vector3(
-        waveField.coords[i - 1 + waveField.yLength]?.[0],
-        waveField.coords[i - 1 + waveField.yLength]?.[1],
-        waveField.coords[i - 1 + waveField.yLength]?.[2]
-      )
+      const here = i
+      const right = i + waveField.yLength
+      const downAndRight = i - 1 + waveField.yLength
       acc = [...acc, downAndRight, right, here]
     }
 
     return acc
-  }, [] as Array<THREE.Vector3>)
+  }, [])
 }
 
 const generateGeometry = (waveField: WaveField): THREE.BufferGeometry => {
@@ -123,12 +106,14 @@ export class WaveField extends MutableWave {
       side: THREE.DoubleSide,
     })
     this._coords = generateWaveCoordArray(this)
-    this._triangles = waveCoordsToTris(this)
+    this._coordinatedTriangles = generateTriangleStencil(this)
+    this._triangles = this.calculateTriangles()
     this._geometry = generateGeometry(this)
     this._mesh = generateMesh(this)
   }
-  private _coords: WaveCoordArray
-  private _triangles: Triangles
+  private _coords: Array<THREE.Vector3>
+  private _coordinatedTriangles: Array<number>
+  private _triangles: Array<THREE.Vector3>
   private _geometry: THREE.BufferGeometry
   private _material: THREE.Material
   private _mesh: THREE.Mesh
@@ -136,15 +121,15 @@ export class WaveField extends MutableWave {
   public xLength
   public yLength
 
-  public get coords(): WaveCoordArray {
+  public get coords(): Array<THREE.Vector3> {
     return this._coords
   }
 
-  public set coords(nextCoords: WaveCoordArray) {
-    this._coords = nextCoords
+  public get coordinatedTriangles(): Array<number> {
+    return this._coordinatedTriangles
   }
 
-  public get triangles(): Triangles {
+  public get triangles(): Array<THREE.Vector3> {
     return this._triangles
   }
 
@@ -165,22 +150,47 @@ export class WaveField extends MutableWave {
   }
 
   public refresh(): void {
-    console.log('Refreshing')
     this.recalculateCoords()
-    this.recalculateTriangles()
+    this.calculateTriangles()
     this.geometry.setFromPoints(this.triangles)
     this.geometry.computeVertexNormals()
   }
 
-  public recalculateCoords(): void {
-    this.coords.forEach((coord) => {
-      coord[2] = this.calculate(coord[0], coord[1])
-    })
+  public setParameters(
+    func: (parameters: MutableWaveArgs) => MutableWaveArgs
+  ): void {
+    super.setParameters(func)
+    this.refresh()
   }
 
-  public recalculateTriangles(): void {
-    this.triangles.forEach((coord) => {
-      coord.setZ(this.calculate(coord.x, coord.y))
+  private recalculateCoords(): void {
+    // uncomment to prove while backwards is fastest
+    // console.time('coords.forEach')
+    // this.coords.forEach((coord) => {
+    //   coord.setZ(this.calculate(coord.x, coord.y))
+    // })
+    // console.timeEnd('coords.forEach')
+
+    // console.time('coords.while')
+    // let i = 0
+    // while (i < coordsLength) {
+    //   this.coords[i].setZ(this.calculate(this.coords[i].x, this.coords[i].y))
+    //   i++
+    // }
+    // console.timeEnd('coords.while')
+
+    const coordsLength = this.coords.length
+    // console.time('coords.whileBackwards')
+    let j = coordsLength
+    while (j--) {
+      this.coords[j].setZ(this.calculate(this.coords[j].x, this.coords[j].y))
+    }
+    // console.timeEnd('coords.whileBackwards')
+  }
+
+  private calculateTriangles(): Array<THREE.Vector3> {
+    return this.coordinatedTriangles.map((coordIndex) => {
+      return this.coords[coordIndex]
     })
   }
 }

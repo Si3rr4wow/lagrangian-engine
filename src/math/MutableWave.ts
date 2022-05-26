@@ -1,39 +1,54 @@
+export enum parameters {
+  horizontalDisplacement = 'horizontalDisplacement',
+  verticalDisplacement = 'verticalDisplacement',
+  amplitude = 'amplitude',
+  period = 'period',
+}
+
 export interface WaveParameters {
-  horizontalDisplacement?: number
-  verticalDisplacement?: number
-  amplitude?: number
-  period?: number
+  [parameters.horizontalDisplacement]?: number
+  [parameters.verticalDisplacement]?: number
+  [parameters.amplitude]?: number
+  [parameters.period]?: number
+}
+
+export enum waves {
+  sin = 'sin',
+  cos = 'cos',
+}
+
+export interface WaveFormParameters {
+  [waves.sin]?: WaveParameters
+  [waves.cos]?: WaveParameters
+}
+
+export enum axes {
+  x = 'x',
+  y = 'y',
 }
 
 type Wave = (x: number) => number
-type WaveFunction = (
-  sinParameters: WaveParameters,
-  cosParameters: WaveParameters
-) => Wave
-type XYWave = (x: number, y: number) => number
-type XYWaveFunction = (
-  xSinParameters?: WaveParameters,
-  ySinParameters?: WaveParameters,
-  xCosParameters?: WaveParameters,
-  yCosParameters?: WaveParameters
-) => XYWave
+type WaveFunction = (waveFormParameters: WaveFormParameters) => Wave
+type XYWavePoint = (x: number, y: number) => number
+export interface MutableWaveArgs {
+  [axes.x]?: WaveFormParameters
+  [axes.y]?: WaveFormParameters
+}
+type XYWaveFunction = (args: MutableWaveArgs) => XYWavePoint
 
-export const waveFunction: WaveFunction = (
-  sinParameters = {},
-  cosParameters = {}
-) => {
+export const waveFunction: WaveFunction = ({ sin = {}, cos = {} }) => {
   const {
     horizontalDisplacement: sinHorizontalDisplacement = 0,
     verticalDisplacement: sinVerticalDisplacement = 0,
     amplitude: sinAmplitude = 1,
-    period: sinPeriod = 1,
-  } = sinParameters
+    period: sinPeriod = 10,
+  } = sin
   const {
     horizontalDisplacement: cosHorizontalDisplacement = 0,
     verticalDisplacement: cosVerticalDisplacement = 0,
     amplitude: cosAmplitude = 1,
-    period: cosPeriod = 1,
-  } = cosParameters
+    period: cosPeriod = 10,
+  } = cos
   return (x) =>
     sinVerticalDisplacement +
     sinAmplitude * Math.sin((x - sinHorizontalDisplacement) / sinPeriod) +
@@ -41,97 +56,39 @@ export const waveFunction: WaveFunction = (
       cosAmplitude * Math.cos((x - cosHorizontalDisplacement) / cosPeriod))
 }
 
-export const xyWaveFunction: XYWaveFunction = (
-  xSinParameters = {},
-  ySinParameters = {},
-  xCosParameters = {},
-  yCosParameters = {}
-): XYWave => {
-  const xWave = waveFunction(xSinParameters, xCosParameters)
-  const yWave = waveFunction(ySinParameters, yCosParameters)
+export const xyWaveFunction: XYWaveFunction = ({
+  x = {},
+  y = {},
+}): XYWavePoint => {
+  const xWave = waveFunction(x)
+  const yWave = waveFunction(y)
   return (x: number, y: number): number => xWave(x) * yWave(y)
 }
 
-export interface MutableWaveArgs {
-  x?: { sinParameters?: WaveParameters; cosParameters?: WaveParameters }
-  y?: { sinParameters?: WaveParameters; cosParameters?: WaveParameters }
-}
-
 export class MutableWave {
-  constructor({
-    x: {
-      sinParameters: xSinParameters = {},
-      cosParameters: xCosParameters = {},
-    } = {},
-    y: {
-      sinParameters: ySinParameters = {},
-      cosParameters: yCosParameters = {},
-    } = {},
-  }: MutableWaveArgs) {
-    this._xSinParameters = xSinParameters
-    this._ySinParameters = ySinParameters
-    this._xCosParameters = xCosParameters
-    this._yCosParameters = yCosParameters
-    this._paramsChangedSinceLastCalculate = true
+  constructor(args: MutableWaveArgs) {
     this._id = Math.floor(Math.random() * 10000000)
+    this.calculate = xyWaveFunction(args)
+    this._parameters = args
   }
 
-  _id
+  private _id
+  private _parameters
 
-  private _xSinParameters: WaveParameters
-  private _ySinParameters: WaveParameters
-  private _xCosParameters: WaveParameters
-  private _yCosParameters: WaveParameters
-
-  private _paramsChangedSinceLastCalculate: boolean
-
-  public get paramsChangedSinceLastCalculate(): boolean {
-    return this._paramsChangedSinceLastCalculate
+  public get id(): number {
+    return this._id
   }
 
-  public set xSinParameters(parameters: WaveParameters) {
-    this._paramsChangedSinceLastCalculate = true
-    this._xSinParameters = parameters
+  public get parameters(): MutableWaveArgs {
+    return this._parameters
   }
 
-  public get xSinParameters(): WaveParameters {
-    return this._xSinParameters
+  public setParameters(
+    func: (parameters: MutableWaveArgs) => MutableWaveArgs
+  ): void {
+    this._parameters = func(this.parameters)
+    this.calculate = xyWaveFunction(this._parameters)
   }
 
-  public set ySinParameters(parameters: WaveParameters) {
-    this._paramsChangedSinceLastCalculate = true
-    this._ySinParameters = parameters
-  }
-
-  public get ySinParameters(): WaveParameters {
-    return this._ySinParameters
-  }
-
-  public set xCosParameters(parameters: WaveParameters) {
-    this._paramsChangedSinceLastCalculate = true
-    this._xCosParameters = parameters
-  }
-
-  public get xCosParameters(): WaveParameters {
-    return this._xCosParameters
-  }
-
-  public set yCosParameters(parameters: WaveParameters) {
-    this._paramsChangedSinceLastCalculate = true
-    this._yCosParameters = parameters
-  }
-
-  public get yCosParameters(): WaveParameters {
-    return this._yCosParameters
-  }
-
-  public calculate(x: number, y: number): number {
-    this._paramsChangedSinceLastCalculate = false
-    return xyWaveFunction(
-      this._xSinParameters,
-      this._ySinParameters,
-      this._xCosParameters,
-      this._yCosParameters
-    )(x, y)
-  }
+  public calculate
 }
