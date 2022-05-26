@@ -1,6 +1,9 @@
 import { Div, Input, Label } from '../../components'
 import { axes, parameters, waves } from '../../math/MutableWave'
 import { WaveField } from '../../math/WaveField'
+import { defaultMutableWaveArgs } from '.'
+
+const controlScaling = 10
 
 export const WaveControls = (mutableWave: WaveField): void => {
   const controlsWrapper = Div()
@@ -11,10 +14,12 @@ export const WaveControls = (mutableWave: WaveField): void => {
     label,
     parent,
     onchange,
+    value,
   }: {
     label: string
     parent: HTMLDivElement
     onchange: (this: GlobalEventHandlers, ev: Event) => void
+    value: number
   }): HTMLElement => {
     const wrapper = Div()
     wrapper.style.borderBottom = '1px solid #aaa'
@@ -29,9 +34,9 @@ export const WaveControls = (mutableWave: WaveField): void => {
     paramInputLabel.appendChild(paramInput)
     paramInput.style.width = '100%'
     paramInput.type = 'range'
-    paramInput.min = '1'
-    paramInput.max = '100'
-    paramInput.value = '1'
+    paramInput.min = String(-controlScaling * 10)
+    paramInput.max = String(controlScaling * 10)
+    paramInput.value = String(value * controlScaling)
     paramInput.oninput = onchange
     return wrapper
   }
@@ -42,6 +47,7 @@ export const WaveControls = (mutableWave: WaveField): void => {
         ParamInput({
           label: `${axis} ${wave} ${parameter}`,
           parent: controlsWrapper,
+          value: defaultMutableWaveArgs[axis]?.[wave]?.[parameter] || 1,
           onchange: (event: Event): void => {
             const target = event.target as HTMLInputElement
             mutableWave.setParameters((parameters) => {
@@ -51,7 +57,7 @@ export const WaveControls = (mutableWave: WaveField): void => {
                   ...parameters[axis],
                   [wave]: {
                     ...parameters[axis]?.[wave],
-                    [parameter]: Number(target.value) / 10,
+                    [parameter]: Number(target.value) / controlScaling,
                   },
                 },
               }
